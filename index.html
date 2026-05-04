@@ -1,0 +1,1100 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Comisiones — Todo Fiambre</title>
+
+<!-- PDF.js para leer PDFs en el navegador -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!-- SheetJS para leer y exportar Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+  /* =============================================
+     VARIABLES Y RESET
+  ============================================= */
+  :root {
+    --bg:        #0f1117;
+    --surface:   #181c27;
+    --surface2:  #1e2335;
+    --border:    #2a3050;
+    --accent:    #e8b84b;
+    --accent2:   #f0d080;
+    --green:     #4ecb8d;
+    --red:       #e85c5c;
+    --blue:      #5c9be8;
+    --text:      #e8eaf0;
+    --muted:     #8891aa;
+    --radius:    10px;
+    --font-head: 'Georgia', 'Times New Roman', serif;
+    --font-body: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    min-height: 100vh;
+    padding: 0 0 60px 0;
+  }
+
+  /* =============================================
+     HEADER
+  ============================================= */
+  header {
+    background: linear-gradient(135deg, #1a1f2e 0%, #0f1117 100%);
+    border-bottom: 2px solid var(--accent);
+    padding: 22px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  header .logo-icon {
+    width: 42px; height: 42px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-family: var(--font-head);
+    font-size: 22px;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+  }
+  header p {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 2px;
+  }
+
+  /* =============================================
+     LAYOUT PRINCIPAL
+  ============================================= */
+  .main {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* =============================================
+     CARDS / PANELES
+  ============================================= */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+  }
+  .card-title {
+    font-family: var(--font-head);
+    font-size: 15px;
+    color: var(--accent2);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--font-body);
+  }
+
+  /* =============================================
+     UPLOAD ROW
+  ============================================= */
+  .upload-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 700px) { .upload-row { grid-template-columns: 1fr; } }
+
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 24px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent);
+    background: rgba(232,184,75,.05);
+  }
+  .upload-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-zone .icon { font-size: 32px; margin-bottom: 8px; }
+  .upload-zone .label { color: var(--muted); font-size: 13px; }
+  .upload-zone .label strong { color: var(--text); }
+  .upload-zone .status {
+    margin-top: 10px;
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    display: inline-block;
+  }
+  .status-ok  { background: rgba(78,203,141,.12); color: var(--green); border: 1px solid rgba(78,203,141,.3); }
+  .status-err { background: rgba(232,92,92,.12);  color: var(--red);   border: 1px solid rgba(232,92,92,.3); }
+
+  /* =============================================
+     BOTÓN PROCESAR
+  ============================================= */
+  .btn-process {
+    background: var(--accent);
+    color: #111;
+    font-weight: 700;
+    font-size: 15px;
+    padding: 13px 36px;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background .15s, transform .1s;
+    letter-spacing: 0.3px;
+  }
+  .btn-process:hover  { background: var(--accent2); }
+  .btn-process:active { transform: scale(.98); }
+  .btn-process:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 13px;
+    padding: 9px 20px;
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .btn-secondary:hover { background: rgba(232,184,75,.1); }
+
+  .action-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  /* =============================================
+     MENSAJES DE ESTADO / LOG
+  ============================================= */
+  #log {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--muted);
+    max-height: 140px;
+    overflow-y: auto;
+    display: none;
+    line-height: 1.8;
+  }
+  #log .log-ok   { color: var(--green); }
+  #log .log-warn { color: var(--accent); }
+  #log .log-err  { color: var(--red); }
+
+  /* =============================================
+     RESUMEN DE TOTALES
+  ============================================= */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .summary-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .summary-box .s-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+  }
+  .summary-box .s-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    font-family: var(--font-head);
+  }
+  .summary-box.highlight .s-value { color: var(--accent); }
+  .summary-box.green    .s-value { color: var(--green); }
+
+  /* =============================================
+     TABLA DE PRODUCTOS
+  ============================================= */
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    background: var(--surface2);
+    color: var(--muted);
+    font-weight: 600;
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+  tbody tr { border-bottom: 1px solid rgba(42,48,80,.6); }
+  tbody tr:hover { background: rgba(255,255,255,.02); }
+  tbody td { padding: 9px 12px; vertical-align: top; }
+  .td-code  { color: var(--muted); font-size: 12px; }
+  .td-name  { font-weight: 500; }
+  .td-pdf   { font-style: italic; font-size: 12px; color: var(--blue); }
+  .td-num   { text-align: right; font-variant-numeric: tabular-nums; }
+  .td-comm  { text-align: right; color: var(--green); font-weight: 600; }
+  .td-pct   { text-align: center; }
+  .badge-pct {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 11px;
+    color: var(--accent2);
+  }
+  .no-match { color: var(--red); font-size: 11px; }
+  .source-badge {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 4px;
+  }
+  .sb-excel { background: rgba(78,203,141,.15); color: var(--green); border: 1px solid rgba(78,203,141,.3); }
+  .sb-pdf   { background: rgba(92,155,232,.15); color: var(--blue);  border: 1px solid rgba(92,155,232,.3); }
+
+  /* Tabla agrupada por PDF */
+  .pdf-group-header td {
+    background: rgba(232,184,75,.07);
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 12px;
+    padding: 8px 12px;
+    border-top: 1px solid rgba(232,184,75,.25);
+    border-bottom: 1px solid rgba(232,184,75,.15);
+  }
+
+  /* =============================================
+     REGLAS DE COMISIÓN (panel informativo)
+  ============================================= */
+  .rules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+  }
+  .rule-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .rule-item .r-name { color: var(--text); font-size: 12px; }
+  .rule-item .r-pct  { color: var(--accent); font-weight: 700; font-size: 14px; }
+
+  /* =============================================
+     EMPTY STATE
+  ============================================= */
+  .empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--muted);
+  }
+  .empty-state .es-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { font-size: 13px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-icon">🏷️</div>
+  <div>
+    <h1>Calculadora de Comisiones</h1>
+    <p>Todo Fiambre — Cañuelas / Ezeiza</p>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- =============================================
+       PASO 1: CARGA DE ARCHIVOS
+  ============================================= -->
+  <div class="card">
+    <div class="card-title">📂 Paso 1 — Cargar archivos</div>
+    <div class="upload-row">
+
+      <!-- Excel -->
+      <div>
+        <div class="upload-zone" id="zone-excel">
+          <input type="file" id="input-excel" accept=".xlsx,.xls" />
+          <div class="icon">📊</div>
+          <div class="label"><strong>Lista de precios Excel</strong><br>.xlsx con Código · Descripción · Precio</div>
+          <div id="excel-status"></div>
+        </div>
+      </div>
+
+      <!-- PDFs -->
+      <div>
+        <div class="upload-zone" id="zone-pdf">
+          <input type="file" id="input-pdf" accept=".pdf" multiple />
+          <div class="icon">📄</div>
+          <div class="label"><strong>Boletas / Facturas PDF</strong><br>Podés subir varios archivos a la vez</div>
+          <div id="pdf-status"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Botones -->
+    <div class="action-row" style="margin-top:18px;">
+      <button class="btn-process" id="btn-process" disabled onclick="procesarTodo()">
+        ⚡ Calcular comisiones
+      </button>
+      <button class="btn-secondary" id="btn-export" style="display:none" onclick="exportarExcel()">
+        ⬇️ Exportar a Excel
+      </button>
+      <button class="btn-secondary" id="btn-clear" style="display:none" onclick="limpiarTodo()">
+        🗑️ Limpiar
+      </button>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div id="log"></div>
+
+  <!-- =============================================
+       REGLAS DE COMISIÓN
+  ============================================= -->
+  <div class="card">
+    <div class="card-title">📋 Reglas de comisión configuradas</div>
+    <div class="rules-grid" id="rules-display"></div>
+  </div>
+
+  <!-- =============================================
+       RESULTADOS
+  ============================================= -->
+  <div id="results-section" style="display:none">
+
+    <!-- Resumen numérico -->
+    <div class="card">
+      <div class="card-title">💰 Resumen de comisiones</div>
+      <div class="summary-grid">
+        <div class="summary-box highlight">
+          <div class="s-label">Total Comisión</div>
+          <div class="s-value" id="s-comision">$0</div>
+        </div>
+        <div class="summary-box">
+          <div class="s-label">Total Importe Boletas</div>
+          <div class="s-value" id="s-total">$0</div>
+        </div>
+        <div class="summary-box">
+          <div class="s-label">Productos procesados</div>
+          <div class="s-value" id="s-prods">0</div>
+        </div>
+        <div class="summary-box">
+          <div class="s-label">PDFs procesados</div>
+          <div class="s-value" id="s-pdfs">0</div>
+        </div>
+        <div class="summary-box" id="s-nobox" style="display:none">
+          <div class="s-label" style="color:var(--red)">Sin match en lista</div>
+          <div class="s-value" id="s-nomatch" style="color:var(--red)">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla detalle -->
+    <div class="card">
+      <div class="card-title">
+        🧾 Detalle por boleta
+        <span class="badge" id="badge-count"></span>
+      </div>
+      <div class="table-wrap">
+        <table id="result-table">
+          <thead>
+            <tr>
+              <th>PDF / Boleta</th>
+              <th>Código</th>
+              <th>Descripción PDF</th>
+              <th>Descripción Lista</th>
+              <th class="td-num">Cant.</th>
+              <th class="td-num">Importe ($)</th>
+              <th class="td-pct">% Comisión</th>
+              <th class="td-num">Comisión ($)</th>
+            </tr>
+          </thead>
+          <tbody id="result-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /results-section -->
+
+  <!-- Empty state inicial -->
+  <div class="empty-state" id="empty-state">
+    <div class="es-icon">📦</div>
+    <p>Cargá la lista de precios (Excel) y una o más boletas (PDF)<br>para calcular las comisiones automáticamente.</p>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ===========================================================
+//  CONFIGURACIÓN DE COMISIONES
+//  Se compara contra nombre/descripción del producto
+//  (normalizado a mayúsculas sin tildes)
+// ===========================================================
+const REGLAS_COMISION = [
+  // { label, keywords: array de palabras clave (OR), pct }
+  // Keywords se buscan en el nombre normalizado del producto
+  {
+    label: "Pan / Huevo / Mendia",
+    keywords: ["PAN", "HUEVO", "MENDIA", "REMANSO"],
+    pct: 3.0
+  },
+  {
+    label: "Aceite / Krachitos",
+    keywords: ["ACEITE", "KRACHITOS"],
+    pct: 1.5
+  },
+  {
+    label: "Cremoso Ilusiones / Santa María / Riosma / El Bierzo / Cayfar / Don Luis / Atahualpa",
+    keywords: ["ILUSIONES", "SANTA MARIA", "RIOSMA", "BIERZO", "CAYFAR", "DON LUIS", "ATAHUALPA"],
+    pct: 1.0
+  },
+   label: "Cremigal yogur 1L / Leche 1L / Queso"
+    keywords: ["CREMIGAL YOGUR BEBIBLE", "CREMIGAL LECHE LARGA VIDA, "CREMIGAL QUESO"]
+    pct: 1.0
+  },
+  {
+    label: "Tanto ddl / Manteca",
+    keywords: ["TANTO"],
+    pct: 3.0
+  }, 
+  {
+    label: "Matambre",
+    keywords: ["MATAMBRE CAMPO ARGENTINO"],
+    pct: 1.5
+  },
+  {
+    label: "Cremigal",
+    keywords: ["CREMIGAL YOGUR", CREMIGAL UNTABLE", "CREMIGAL CREMA", "CREMIGAL FLAN", "CREMIGAL MANTECA", "CREMIGAL GELATINA",
+	           "CREMIGAL POSTRE"],
+    pct: 1.5
+  }
+];
+
+// ===========================================================
+//  ESTADO GLOBAL
+// ===========================================================
+let listaProductos = [];   // [{codigo, descripcion, precio}]
+let archivoPDFs    = [];   // Array de File
+let resultados     = [];   // filas procesadas
+
+// ===========================================================
+//  RENDERIZAR REGLAS
+// ===========================================================
+function renderReglas() {
+  const el = document.getElementById('rules-display');
+  el.innerHTML = REGLAS_COMISION.map(r => `
+    <div class="rule-item">
+      <span class="r-name">${r.label}</span>
+      <span class="r-pct">${r.pct}%</span>
+    </div>
+  `).join('');
+}
+renderReglas();
+
+// ===========================================================
+//  NORMALIZAR TEXTO: quita tildes, pasa a mayúsculas
+// ===========================================================
+function norm(str) {
+  return (str || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase().trim();
+}
+
+// ===========================================================
+//  DETERMINAR % DE COMISIÓN SEGÚN DESCRIPCIÓN
+//
+//  Se busca cada keyword como substring dentro del nombre
+//  normalizado. Así "EL BIERZO SALAME MILAN" matchea "BIERZO",
+//  "ATAHUALPA 3 FEBRERO JAMON" matchea "ATAHUALPA", etc.
+//
+//  Las reglas se evalúan en orden: la primera que coincide gana.
+// ===========================================================
+function obtenerComision(descripcion) {
+  const d = norm(descripcion);
+  for (const regla of REGLAS_COMISION) {
+    for (const kw of regla.keywords) {
+      // Cada keyword puede ser multi-palabra (ej: "SANTA MARIA", "DON LUIS")
+      // → la buscamos como substring exacto en el nombre normalizado
+      if (d.includes(norm(kw))) return regla.pct;
+    }
+  }
+  return null; // producto sin regla de comisión definida
+}
+
+// ===========================================================
+//  FORMATEAR MONEDA
+// ===========================================================
+function fmt(n) {
+  if (isNaN(n) || n === null) return '—';
+  return '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+// ===========================================================
+//  LOG DE MENSAJES
+// ===========================================================
+function log(msg, tipo = '') {
+  const el = document.getElementById('log');
+  el.style.display = 'block';
+  el.innerHTML += `<span class="log-${tipo}">▸ ${msg}</span><br>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+// ===========================================================
+//  LEER EXCEL
+//  Detecta columnas: código, descripción, precio
+//  Compatible con el formato del PDF de lista de precios.
+//  Busca columnas por nombre o usa posición [0]=codigo, [1]=desc, [2]=precio
+// ===========================================================
+function leerExcel(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+        // Encontrar fila de encabezado
+        let headerRow = -1;
+        let colCodigo = -1, colDesc = -1, colPrecio = -1;
+
+        for (let i = 0; i < Math.min(10, rows.length); i++) {
+          const r = rows[i].map(c => norm(String(c)));
+          const cIdx = r.findIndex(c => c.includes('COD') || c === 'CODIGO' || c === 'COD.');
+          const dIdx = r.findIndex(c => c.includes('DESC') || c.includes('NOMBRE') || c.includes('PRODUCT'));
+          const pIdx = r.findIndex(c => c.includes('PRECIO') || c.includes('COSTO') || c.includes('IMPORTE'));
+          if (cIdx >= 0 && dIdx >= 0) {
+            headerRow = i;
+            colCodigo = cIdx;
+            colDesc   = dIdx;
+            colPrecio = pIdx >= 0 ? pIdx : dIdx + 1;
+            break;
+          }
+        }
+
+        // Si no encontró encabezado, asume col 0=codigo, 1=desc, 2=precio
+        const dataStart = headerRow >= 0 ? headerRow + 1 : 1;
+        if (colCodigo < 0) { colCodigo = 0; colDesc = 1; colPrecio = 2; }
+
+        const productos = [];
+        for (let i = dataStart; i < rows.length; i++) {
+          const r = rows[i];
+          const codigo = String(r[colCodigo] || '').trim();
+          const desc   = String(r[colDesc]   || '').trim();
+          const rawPrecio = r[colPrecio];
+          // Limpiar precio: puede venir como "$ 6.211,50" o "6211.5"
+          let precio = 0;
+          if (rawPrecio !== undefined && rawPrecio !== '') {
+            const cleaned = String(rawPrecio).replace(/[^0-9,\.]/g, '')
+              .replace(/\.(?=\d{3}(,|$))/g, '')  // quita separador de miles con punto
+              .replace(',', '.');
+            precio = parseFloat(cleaned) || 0;
+          }
+          if (codigo && desc) {
+            productos.push({ codigo, descripcion: desc, precio });
+          }
+        }
+        resolve(productos);
+      } catch(err) { reject(err); }
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// ===========================================================
+//  LEER PDF CON PDF.JS
+//
+//  Reconstruye líneas agrupando los items de texto por su
+//  coordenada Y (redondeada a 1px de tolerancia para que
+//  elementos de la misma línea queden juntos aunque varíen
+//  ligeramente en altura).
+// ===========================================================
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+async function leerPDF(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let lineas = [];
+
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page    = await pdf.getPage(p);
+    const content = await page.getTextContent();
+
+    // Agrupar items por Y con tolerancia de ±2px
+    const grupos = [];
+    for (const item of content.items) {
+      if (!item.str.trim()) continue;
+      const y = item.transform[5];
+      const x = item.transform[4];
+      // Buscar grupo existente con Y cercano
+      let grupo = grupos.find(g => Math.abs(g.y - y) <= 2);
+      if (!grupo) { grupo = { y, items: [] }; grupos.push(grupo); }
+      grupo.items.push({ x, text: item.str });
+    }
+
+    // Ordenar grupos de arriba a abajo (Y mayor = más arriba en PDF)
+    grupos.sort((a, b) => b.y - a.y);
+
+    for (const g of grupos) {
+      // Ordenar items de izquierda a derecha
+      g.items.sort((a, b) => a.x - b.x);
+      // Unir con espacio y agregar a lineas
+      lineas.push(g.items.map(i => i.text).join(' '));
+    }
+  }
+
+  return lineas.join('\n');
+}
+
+// ===========================================================
+//  PARSEAR LÍNEAS DEL PDF
+//
+//  Formato real de las boletas Todo Fiambre:
+//  "  1,00 EL BIERZO SALAME MILAN 1154 (2.30 KGM) 9.738,40 22.398,32"
+//   ^cant  ^descripción             ^kg entre ()  ^p.unit   ^importe
+//
+//  El importe que nos interesa es el ÚLTIMO número de la línea (importe total).
+//  La descripción puede contener el peso en KGM entre paréntesis: lo quitamos.
+//
+//  También soporta líneas sin paréntesis de KGM:
+//  "  2,00 CREMIGAL CREMOSO 14.109,90"
+// ===========================================================
+function parsearLineasPDF(texto, nombreArchivo) {
+  const lineas = texto.split('\n');
+  const items  = [];
+
+  // Palabras que indican que la línea NO es un producto
+  const SKIP = /^(TOTAL|SUBTOTAL|IVA|DESCUENTO|BONIFIC|SALDO|FECHA|CLIENTE|FACTURA|RECIBO|REMITO|VENDEDOR|COMPROBANTE|NRO|IMPORTE|CANTIDAD|DETALLE|PRECIO|NO\s*FISCAL|TODOFIAMBRE|FACUNDO|TODO\s*FIAMBRE)/i;
+
+  for (const linea of lineas) {
+    const l = linea.trim();
+    if (!l || l.length < 6) continue;
+    if (SKIP.test(l))       continue;
+
+    // -------------------------------------------------------
+    // REGEX PRINCIPAL
+    // Captura:
+    //   grupo 1: cantidad  → "1,00" o "4,00"
+    //   grupo 2: descripción (puede incluir el bloque KGM)
+    //   grupo 3: precio unitario  (penúltimo número) — opcional
+    //   grupo 4: importe total    (último número)
+    //
+    // Números argentinos: separador de miles = punto, decimal = coma
+    // Ej: 9.738,40  /  117.930,43  /  22.398,32
+    // -------------------------------------------------------
+    const re = /^(\d{1,3}(?:\.\d{3})*[,\.]\d{2})\s+(.+?)\s+([\d\.]+,\d{2})\s+([\d\.]+,\d{2})\s*$/;
+    const m  = l.match(re);
+
+    if (m) {
+      const cantidad = parseNum(m[1]);
+      // Limpiar descripción: quitar el bloque "(X.XX KGM)" si existe
+      const descripcion = m[2].replace(/\(\s*[\d,\.]+\s*KGM\s*\)/i, '').trim();
+      // m[3] = precio unitario, m[4] = importe total de la línea
+      const importe = parseNum(m[4]);
+
+      if (cantidad > 0 && importe > 0 && descripcion.length > 2) {
+        items.push({ codigo: '', descripcion, cantidad, importe, fuente: nombreArchivo });
+      }
+      continue;
+    }
+
+    // -------------------------------------------------------
+    // FALLBACK: línea con sólo cantidad + descripción + 1 número
+    // Ej: "1,00 CREMIGAL CREMOSO 14.109,90"
+    // -------------------------------------------------------
+    const re2 = /^(\d{1,3}(?:\.\d{3})*[,\.]\d{2})\s+(.+?)\s+([\d\.]+,\d{2})\s*$/;
+    const m2  = l.match(re2);
+    if (m2) {
+      const cantidad    = parseNum(m2[1]);
+      const descripcion = m2[2].replace(/\(\s*[\d,\.]+\s*KGM\s*\)/i, '').trim();
+      const importe     = parseNum(m2[3]);
+      if (cantidad > 0 && importe > 0 && descripcion.length > 2) {
+        items.push({ codigo: '', descripcion, cantidad, importe, fuente: nombreArchivo });
+      }
+    }
+  }
+
+  return items;
+}
+
+function parseNum(str) {
+  // Convierte numeros en formato argentino a float
+  // Soporta: "1,00"  "5.000,00"  "7.689.400,00"  "22.398,32"  "856,99"
+  if (!str) return 0;
+  const s = String(str).replace(/[^0-9,\.]/g, '').trim();
+  if (!s) return 0;
+  // Si tiene coma: la coma ES el decimal, los puntos son miles
+  // Funciona para todos los casos: 1,00 / 5.000,00 / 7.689.400,00
+  if (s.includes(',')) {
+    return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
+  }
+  // Sin coma: punto decimal o numero entero
+  return parseFloat(s) || 0;
+}
+
+// ===========================================================
+//  MATCHING: busca el producto del PDF en la lista Excel
+//  Estrategia:
+//   1. Si tiene código → buscar por código exacto
+//   2. Fuzzy por palabras clave de la descripción
+// ===========================================================
+function matchProducto(item) {
+  const desc = norm(item.descripcion);
+  const cod  = (item.codigo || '').trim();
+
+  // 1. Matching exacto por código
+  if (cod) {
+    const byCode = listaProductos.find(p => p.codigo === cod);
+    if (byCode) return byCode;
+  }
+
+  // 2. Buscar la descripción del PDF dentro de la lista (o viceversa)
+  // Dividimos el nombre en palabras y contamos cuántas coinciden
+  const palabrasPDF = desc.split(/\s+/).filter(w => w.length > 2);
+  let mejorMatch = null;
+  let mejorScore = 0;
+
+  for (const prod of listaProductos) {
+    const descProd = norm(prod.descripcion);
+    let score = 0;
+    for (const pal of palabrasPDF) {
+      if (descProd.includes(pal)) score++;
+    }
+    // También cheque inverso
+    const palabrasProd = descProd.split(/\s+/).filter(w => w.length > 2);
+    for (const pal of palabrasProd) {
+      if (desc.includes(pal)) score += 0.5;
+    }
+    if (score > mejorScore) {
+      mejorScore = score;
+      mejorMatch = prod;
+    }
+  }
+
+  // Umbral mínimo: al menos 2 palabras coincidentes
+  if (mejorScore >= 2) return mejorMatch;
+
+  return null;
+}
+
+// ===========================================================
+//  PROCESAR TODO
+// ===========================================================
+async function procesarTodo() {
+  const btn = document.getElementById('btn-process');
+  btn.disabled = true;
+  btn.textContent = '⏳ Procesando...';
+  document.getElementById('log').innerHTML = '';
+
+  resultados = [];
+  let totalImporte = 0;
+  let totalComision = 0;
+  let sinMatch = 0;
+
+  try {
+    for (const pdfFile of archivoPDFs) {
+      log(`Leyendo: ${pdfFile.name}`, 'ok');
+      const texto = await leerPDF(pdfFile);
+      const items = parsearLineasPDF(texto, pdfFile.name);
+      log(`  → ${items.length} líneas detectadas en ${pdfFile.name}`, items.length > 0 ? 'ok' : 'warn');
+
+      if (items.length === 0) {
+        log(`  ⚠️ No se pudieron extraer líneas de producto de ${pdfFile.name}. Verificá el formato.`, 'warn');
+      }
+
+      for (const item of items) {
+        // Determinar nombre a usar para comisión
+        const matchProd = matchProducto(item);
+        const nombreParaComision = matchProd ? matchProd.descripcion : item.descripcion;
+        const pct = obtenerComision(nombreParaComision);
+        const comision = pct !== null ? (item.importe * pct / 100) : 0;
+
+        totalImporte  += item.importe;
+        totalComision += comision;
+        if (!matchProd) sinMatch++;
+
+        resultados.push({
+          pdf:         item.fuente,
+          codigo:      matchProd ? matchProd.codigo : item.codigo,
+          descPDF:     item.descripcion,
+          descLista:   matchProd ? matchProd.descripcion : '',
+          cantidad:    item.cantidad,
+          importe:     item.importe,
+          pct:         pct,
+          comision:    comision,
+          sinMatch:    !matchProd
+        });
+      }
+    }
+
+    // Mostrar resultados
+    mostrarResultados(totalImporte, totalComision, sinMatch);
+    log(`✅ Listo. Comisión total: ${fmt(totalComision)}`, 'ok');
+
+  } catch(err) {
+    log(`❌ Error: ${err.message}`, 'err');
+    console.error(err);
+  }
+
+  btn.disabled = false;
+  btn.textContent = '⚡ Calcular comisiones';
+}
+
+// ===========================================================
+//  MOSTRAR RESULTADOS EN LA TABLA
+// ===========================================================
+function mostrarResultados(totalImporte, totalComision, sinMatch) {
+  document.getElementById('results-section').style.display = 'block';
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('btn-export').style.display = 'inline-block';
+  document.getElementById('btn-clear').style.display = 'inline-block';
+
+  // Sumarios
+  document.getElementById('s-total').textContent    = fmt(totalImporte);
+  document.getElementById('s-comision').textContent = fmt(totalComision);
+  document.getElementById('s-prods').textContent    = resultados.length;
+  document.getElementById('s-pdfs').textContent     = archivoPDFs.length;
+  document.getElementById('badge-count').textContent = `${resultados.length} ítems`;
+
+  if (sinMatch > 0) {
+    document.getElementById('s-nobox').style.display = 'block';
+    document.getElementById('s-nomatch').textContent = sinMatch;
+  }
+
+  // Agrupar por PDF
+  const grupos = {};
+  for (const r of resultados) {
+    if (!grupos[r.pdf]) grupos[r.pdf] = [];
+    grupos[r.pdf].push(r);
+  }
+
+  const tbody = document.getElementById('result-tbody');
+  tbody.innerHTML = '';
+
+  for (const [pdfName, filas] of Object.entries(grupos)) {
+    // Fila de encabezado de grupo
+    const subtotalImporte  = filas.reduce((s,f) => s + f.importe, 0);
+    const subtotalComision = filas.reduce((s,f) => s + f.comision, 0);
+
+    const th = document.createElement('tr');
+    th.className = 'pdf-group-header';
+    th.innerHTML = `<td colspan="8">
+      📄 ${pdfName}
+      &nbsp;|&nbsp; Importe: ${fmt(subtotalImporte)}
+      &nbsp;|&nbsp; Comisión: <span style="color:var(--green)">${fmt(subtotalComision)}</span>
+    </td>`;
+    tbody.appendChild(th);
+
+    for (const f of filas) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="td-code">${f.pdf}</td>
+        <td class="td-code">${f.codigo || '—'}</td>
+        <td class="td-pdf">${escHtml(f.descPDF)}</td>
+        <td class="td-name">
+          ${f.sinMatch
+            ? '<span class="no-match">⚠️ Sin match en lista</span>'
+            : escHtml(f.descLista)
+          }
+        </td>
+        <td class="td-num">${f.cantidad}</td>
+        <td class="td-num">${fmt(f.importe)}</td>
+        <td class="td-pct">
+          ${f.pct !== null
+            ? `<span class="badge-pct">${f.pct}%</span>`
+            : '<span style="color:var(--muted);font-size:11px">sin regla</span>'
+          }
+        </td>
+        <td class="td-comm">${fmt(f.comision)}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ===========================================================
+//  EXPORTAR A EXCEL
+// ===========================================================
+function exportarExcel() {
+  if (!resultados.length) return;
+
+  const data = [
+    ['PDF / Boleta', 'Código', 'Descripción PDF', 'Descripción Lista', 'Cantidad', 'Importe ($)', '% Comisión', 'Comisión ($)']
+  ];
+
+  // Agrupar por PDF para agregar subtotales
+  const grupos = {};
+  for (const r of resultados) {
+    if (!grupos[r.pdf]) grupos[r.pdf] = [];
+    grupos[r.pdf].push(r);
+  }
+
+  for (const [pdfName, filas] of Object.entries(grupos)) {
+    for (const f of filas) {
+      data.push([
+        f.pdf,
+        f.codigo || '',
+        f.descPDF,
+        f.descLista || '(sin match)',
+        f.cantidad,
+        f.importe,
+        f.pct !== null ? f.pct / 100 : '',
+        f.comision
+      ]);
+    }
+    const subImp = filas.reduce((s,f)=>s+f.importe,0);
+    const subCom = filas.reduce((s,f)=>s+f.comision,0);
+    data.push(['SUBTOTAL: ' + pdfName, '', '', '', '', subImp, '', subCom]);
+    data.push([]); // fila vacía
+  }
+
+  // Fila de total general
+  const totImp = resultados.reduce((s,f)=>s+f.importe,0);
+  const totCom = resultados.reduce((s,f)=>s+f.comision,0);
+  data.push(['TOTAL GENERAL', '', '', '', '', totImp, '', totCom]);
+
+  const ws = XLSX.utils.aoa_to_sheet(data);
+
+  // Formatear columnas de porcentaje e importe
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let R = 1; R <= range.e.r; R++) {
+    const pctCell = ws[XLSX.utils.encode_cell({r:R, c:6})];
+    if (pctCell && typeof pctCell.v === 'number') pctCell.z = '0.0%';
+    ['e','f','g'].forEach((col, idx) => {
+      const c = ws[XLSX.utils.encode_cell({r:R, c:[5,7][idx === 2 ? 0 : idx]})];
+    });
+  }
+
+  ws['!cols'] = [
+    {wch:30},{wch:8},{wch:30},{wch:30},{wch:8},{wch:14},{wch:12},{wch:14}
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Comisiones');
+
+  const fecha = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `comisiones_${fecha}.xlsx`);
+}
+
+// ===========================================================
+//  LIMPIAR TODO
+// ===========================================================
+function limpiarTodo() {
+  listaProductos = [];
+  archivoPDFs = [];
+  resultados = [];
+  document.getElementById('excel-status').innerHTML = '';
+  document.getElementById('pdf-status').innerHTML = '';
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('log').style.display = 'none';
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('empty-state').style.display = 'block';
+  document.getElementById('btn-export').style.display = 'none';
+  document.getElementById('btn-clear').style.display = 'none';
+  document.getElementById('btn-process').disabled = true;
+  document.getElementById('input-excel').value = '';
+  document.getElementById('input-pdf').value = '';
+  document.getElementById('s-nobox').style.display = 'none';
+}
+
+// ===========================================================
+//  EVENTOS DE CARGA DE ARCHIVOS
+// ===========================================================
+document.getElementById('input-excel').addEventListener('change', async function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('excel-status');
+  statusEl.innerHTML = '<span class="status status-ok">⏳ Leyendo...</span>';
+  try {
+    listaProductos = await leerExcel(file);
+    statusEl.innerHTML = `<span class="status status-ok">✅ ${listaProductos.length} productos cargados</span>`;
+    log(`Excel cargado: ${listaProductos.length} productos de "${file.name}"`, 'ok');
+    checkProcesar();
+  } catch(err) {
+    statusEl.innerHTML = `<span class="status status-err">❌ Error leyendo Excel</span>`;
+    log(`Error leyendo Excel: ${err.message}`, 'err');
+  }
+});
+
+document.getElementById('input-pdf').addEventListener('change', function(e) {
+  archivoPDFs = Array.from(e.target.files);
+  const statusEl = document.getElementById('pdf-status');
+  if (archivoPDFs.length) {
+    statusEl.innerHTML = `<span class="status status-ok">✅ ${archivoPDFs.length} PDF(s): ${archivoPDFs.map(f=>f.name).join(', ')}</span>`;
+    log(`${archivoPDFs.length} PDF(s) cargados`, 'ok');
+  }
+  checkProcesar();
+});
+
+function checkProcesar() {
+  const ok = listaProductos.length > 0 && archivoPDFs.length > 0;
+  document.getElementById('btn-process').disabled = !ok;
+}
+
+// Drag & drop visual
+['zone-excel','zone-pdf'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('dragover'); });
+  el.addEventListener('dragleave', () => el.classList.remove('dragover'));
+  el.addEventListener('drop', () => el.classList.remove('dragover'));
+});
+</script>
+</body>
+</html>
