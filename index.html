@@ -482,11 +482,16 @@
 //  (normalizado a mayúsculas sin tildes)
 // ===========================================================
 const REGLAS_COMISION = [
-  // { label, keywords: array de palabras clave (OR), pct }
-  // Keywords se buscan en el nombre normalizado del producto
+  // Las reglas se evaluan en ORDEN: la primera que coincide gana.
+  // Por eso Cremigal especifico va ANTES que Cremigal generico.
   {
-    label: "Pan / Huevo / Mendia",
+    label: "Pan / Huevo / Mendia / Remanso",
     keywords: ["PAN", "HUEVO", "MENDIA", "REMANSO"],
+    pct: 3.0
+  },
+  {
+    label: "Tanto DDL / Manteca",
+    keywords: ["TANTO"],
     pct: 3.0
   },
   {
@@ -495,30 +500,24 @@ const REGLAS_COMISION = [
     pct: 1.5
   },
   {
-    label: "Cremoso Ilusiones / Santa María / Riosma / El Bierzo / Cayfar / Don Luis / Atahualpa",
+    label: "Matambre Campo Argentino",
+    keywords: ["CAMPO ARGENTINO"],
+    pct: 1.5
+  },
+  {
+    label: "Cremigal Yogur / Untable / Crema / Flan / Manteca / Gelatina / Postre",
+    keywords: ["CREMIGAL YOGUR", "CREMIGAL UNTABLE", "CREMIGAL CREMA", "CREMIGAL FLAN", "CREMIGAL MANTECA", "CREMIGAL GELATINA", "CREMIGAL POSTRE"],
+    pct: 1.5
+  },
+  {
+    label: "Ilusiones / Santa Maria / Riosma / El Bierzo / Cayfar / Don Luis / Atahualpa",
     keywords: ["ILUSIONES", "SANTA MARIA", "RIOSMA", "BIERZO", "CAYFAR", "DON LUIS", "ATAHUALPA"],
     pct: 1.0
   },
   {
-   label: "Cremigal yogur 1L / Leche 1L / Queso"
-    keywords: ["CREMIGAL YOGUR BEBIBLE", "CREMIGAL LECHE LARGA VIDA, "CREMIGAL QUESO"]
+    label: "Cremigal (resto)",
+    keywords: ["CREMIGAL"],
     pct: 1.0
-  },
-  {
-    label: "Tanto ddl / Manteca",
-    keywords: ["TANTO"],
-    pct: 3.0
-  }, 
-  {
-    label: "Matambre",
-    keywords: ["MATAMBRE CAMPO ARGENTINO"],
-    pct: 1.5
-  },
-  {
-    label: "Cremigal",
-    keywords: ["CREMIGAL YOGUR", CREMIGAL UNTABLE", "CREMIGAL CREMA", "CREMIGAL FLAN", "CREMIGAL MANTECA", "CREMIGAL GELATINA",
-	           "CREMIGAL POSTRE"],
-    pct: 1.5
   }
 ];
 
